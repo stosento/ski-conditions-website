@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ski Conditions Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="container mx-auto px-4 py-8 max-w-4xl">
+        <h1 class="text-4xl font-bold text-gray-800 mb-4">Ski Conditions Dashboard</h1>
+        <p id="lastUpdated" class="text-sm text-gray-600 mb-8">Loading...</p>
+
+        <div id="content" class="opacity-0 transition-opacity duration-300">
+            <!-- Weather Section -->
+            <div class="mb-12">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Weather Forecast</h2>
+                <div id="weatherContent"></div>
+            </div>
+
+            <!-- Trail Conditions Section -->
+            <div class="mb-12">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Trail Conditions</h2>
+                <div id="trailContent" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            </div>
+
+            <!-- Nubs Nob Conditions -->
+            <div class="mb-12">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Nubs Nob Conditions</h2>
+                <div id="nubsNobContent"></div>
+            </div>
+        </div>
+
+        <div id="loading" class="text-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+            <p class="mt-4 text-gray-600">Loading conditions...</p>
+        </div>
+
+        <div id="error" class="hidden bg-red-50 text-red-700 p-4 rounded-lg">
+            Error loading conditions data. Please try again later.
+        </div>
+    </div>
+
+    <script>
+        async function fetchData() {
+            try {
+                // Replace with your actual data URL (S3 or GitHub)
+                const response = await fetch('https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/data/conditions.json');
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                throw error;
+            }
+        }
+
+        function renderWeather(weather) {
+            return Object.entries(weather).map(([locationKey, info]) => `
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">${info.name}</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        ${info.forecast.map(f => `
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <p class="font-medium text-gray-800">${f.name}</p>
+                                <p class="text-2xl font-bold text-blue-600">${f.temp}°F</p>
+                                <p class="text-sm text-gray-600">Precipitation: ${f.snowfall}%</p>
+                                <p class="text-sm text-gray-600">${f.shortForecast}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // [Additional rendering functions for trail conditions and Nubs Nob...]
+
+        async function updateUI() {
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+            const error = document.getElementById('error');
+
+            try {
+                loading.classList.remove('hidden');
+                error.classList.add('hidden');
+                content.classList.add('opacity-0');
+
+                const data = await fetchData();
+
+                document.getElementById('lastUpdated').textContent =
+                    `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
+
+                document.getElementById('weatherContent').innerHTML = renderWeather(data.weather);
+                document.getElementById('trailContent').innerHTML = renderTrailConditions(data.nordicConditions);
+                document.getElementById('nubsNobContent').innerHTML = renderNubsNob(data.nubsNob);
+
+                loading.classList.add('hidden');
+                content.classList.remove('opacity-0');
+            } catch (err) {
+                loading.classList.add('hidden');
+                error.classList.remove('hidden');
+            }
+        }
+
+        // Update on page load
+        updateUI();
+
+        // Refresh every 30 minutes
+        setInterval(updateUI, 30 * 60 * 1000);
+    </script>
+</body>
+</html>
